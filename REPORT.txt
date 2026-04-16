@@ -1,16 +1,3 @@
-"again" is bad because it forces the programmer to use exceptions "normal" for
-control flow. Why is it a bad idea.
-
-What is the difference between parallelism and concurrency? Use examples from
-your implementation to illustrate the difference.
-
-What is the difference between blocking a thread and blocking a coroutine?
-Use examples from you implementation.
-
-p6 and p7 are modeled after Go, itself modelled after CSP. Explain the
-connection.
-
-Do you see the connection between p6/p7 and Python yield/iterators? Explain
-
-
-
+(1) What will you do? (1-2 paragraphs)
+(2) Who are the team members?
+(3) What research did you do? Links to articles, papers, etc.
