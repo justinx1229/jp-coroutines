@@ -1,6 +1,8 @@
 #ifndef MEM 
 #define MEM 
 
+#include "consts.h"
+
 #include <cstdint>
 #include <iostream>
 
@@ -13,10 +15,11 @@ const uint32_t SIZE_HRAM = 175;
 
 // 1100000000000000
 const uint16_t RB0_MASK = (1 << 14) | (1 << 15);
-const uint16_t LO_14 = (1 << 14) - 1;
 
 uint8_t read_byte(uint16_t address);
 
 void write_byte(uint16_t address, uint8_t byte);
+
+void write16(uint16_t address, uint16_t val);
 
 #endif

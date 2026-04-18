@@ -58,23 +58,11 @@ int main() {
 
     // run window. 
     while (!done) {
-        // get time
-        uint32_t cur_time = SDL_GetTicks();
-        
         // handle quit
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 done = true;
             }
-        }
-
-        // update screen 
-
-        // run instructionss
-
-        uint32_t time_elapsed = SDL_GetTicks() - cur_time;
-        if (FRAME_LEN > time_elapsed) {
-            SDL_Delay(FRAME_LEN - time_elapsed);
         }
     }
 

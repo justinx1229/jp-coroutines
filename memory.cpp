@@ -28,3 +28,10 @@ void write_byte(uint16_t address, uint8_t byte) {
         ROM_bank_01_NN[address & LO_14] = byte;
     }
 }
+
+void write16(uint16_t address, uint16_t val) {
+    if (!(address & RB0_MASK)) {
+        ROM_bank_00[address] = val >> 8;
+        ROM_bank_00[address + 1] = val & LO_8;
+    }
+}

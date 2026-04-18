@@ -15,4 +15,10 @@ const uint32_t HEIGHT = 144;
 const uint32_t FPS = 60;
 const uint32_t FRAME_LEN = 1000 / FPS;
 
+const uint8_t CB = 203; 
+const uint16_t LO_14 = (1 << 14) - 1;
+const uint8_t LO_8 = 255;
+const uint8_t LO_4 = 15;
+const uint8_t LO_2 = 3;
+
 #endif
