@@ -12,6 +12,7 @@
 const uint32_t WIDTH = 160;
 const uint32_t HEIGHT = 144;
 
-const uint32_t DELAY = 5000;
+const uint32_t FPS = 60;
+const uint32_t FRAME_LEN = 1000 / FPS;
 
 #endif
