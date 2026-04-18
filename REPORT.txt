@@ -1,3 +1,19 @@
 (1) What will you do? (1-2 paragraphs)
+
+We will try to write a working game boy color emulator that can run a Pokemon game. 
+We must find a way to create the window to play the emulator, as well as figure out which instructions are necessary 
+to run the game. Important features will be using the mmap-ed IO to handle inputs from the keyboard, as well as 
+instructions on displaying pixels and playing sound, if we have the time. 
+
+Ruiqi also mentioned something about dynamic binary translation. At the moment, we will need to see what we are capable 
+of finishing and what we are not, but if we do finish on time we will look into doing this as well. We will try to make 
+the emulator playable and not too slow.
+
 (2) Who are the team members?
+Justin Xu, Patrick Deng
+
 (3) What research did you do? Links to articles, papers, etc.
+https://mattbruv.github.io/gameboy-crust/
+ https://cturt.github.io/cinoop.html 
+ https://www.usenix.org/conference/atc16/technical-sessions/presentation/wang#:~:text=Dynamic%20binary%20translation%20(DBT)%20translates,an%20existing%20retargetable%20DBT%20system. 
+
