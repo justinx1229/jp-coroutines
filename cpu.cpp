@@ -297,17 +297,19 @@ void run00(uint8_t byte) {
         case 7: {
             uint8_t hi_4 = byte >> 4;
             switch (hi_4) {
-                case 0:
+                case 0: {
                     flags[0] = a & 128;
                     flags[1] = 0; flags[2] = 0; flags[3] = 0;
                     a = ((a & LO_7) << 1) | (a >> 7);
                     break;
-                case 1:
+                }
+                case 1: {
                     uint8_t tc = flags[3];
                     flags[0] = a & 128;
                     flags[1] = 0; flags[2] = 0; flags[3] = 0;
                     a = ((a & LO_7) << 1) | tc;
                     break;
+                }
                 case 2: {
                     // yoinked from: https://blog.ollien.com/posts/gb-daa/ 
                     uint8_t offset = 0;
