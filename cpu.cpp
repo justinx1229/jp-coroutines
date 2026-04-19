@@ -11,7 +11,7 @@ uint16_t bc = 0;
 uint16_t de = 0;
 uint16_t hl = 0;
 
-uint8_t get_reg8(uint8_t r) {
+uint8_t get_r8(uint8_t r) {
     switch (r) {
         case 0:
             // b
@@ -50,7 +50,44 @@ uint8_t get_reg8(uint8_t r) {
     return 0;
 }
 
-void set_reg8(uint8_t r, uint16_t v) {
+void add_r8(uint8_t r, uint8_t val) {
+    switch (r) {
+        case 0:
+            // b
+            bc = (bc & LO_8) | (((uint16_t)(((uint8_t)(bc >> 8)) + 1)) << 8); 
+            break;
+        case 1:
+            // c
+            bc = (bc & HI_8) | (((uint8_t)(bc & LO_8)) + 1);
+            break;
+        case 2: 
+            // d
+            de = (de & LO_8) | (((uint16_t)(((uint8_t)(de >> 8)) + 1)) << 8); 
+            break;
+        case 3: 
+            // e
+            de = (de & HI_8) | (((uint8_t)(de & LO_8)) + 1);
+            break;
+        case 4:
+            // h
+            hl = (hl & LO_8) | (((uint16_t)(((uint8_t)(hl >> 8)) + 1)) << 8); 
+            break;
+        case 5:
+            // l
+            hl = (hl & HI_8) | (((uint8_t)(hl & LO_8)) + 1);
+            break;
+        case 6:
+            // [hl]
+            add_byte(hl, val);
+            break;
+        case 7:
+            // a
+            af = (af & LO_8) | (((uint16_t)(((uint8_t)(af >> 8)) + 1)) << 8); 
+            break;
+    }
+}
+
+void set_r8(uint8_t r, uint16_t v) {
     switch (r) {
         case 0:
             bc = (bc & LO_8) | (v << 8);
@@ -98,7 +135,7 @@ uint16_t get_16mem(uint8_t r) {
     return 0;
 }
 
-uint16_t get_reg16(uint8_t r) {
+uint16_t get_r16(uint8_t r) {
     switch (r) {
         case 0: 
             return bc;
@@ -117,7 +154,7 @@ uint16_t get_reg16(uint8_t r) {
     return 0;
 }
 
-void set_reg16(uint8_t r, uint16_t val) {
+void set_r16(uint8_t r, uint16_t val) {
     switch (r) {
         case 0: 
             bc = val;
@@ -134,7 +171,7 @@ void set_reg16(uint8_t r, uint16_t val) {
     }
 }
 
-void add_reg16(uint8_t r, uint8_t val) {
+void add_r16(uint8_t r, uint8_t val) {
     switch (r) {
         case 0:
             bc += val;
@@ -159,28 +196,41 @@ void run00(uint8_t byte) {
     switch (byte & LO_4) {
         case 1: {
             uint16_t imm16 = (((uint16_t)read_byte(++pc)) << 8) | read_byte(++pc);
-            set_reg16((byte >> 4) & LO_2, imm16);
+            set_r16((byte >> 4) & LO_2, imm16);
             break;
         }
         case 2:
-            write16(get_16mem((byte >> 4) & LO_2), get_reg8(7));
+            write16(get_16mem((byte >> 4) & LO_2), get_r8(7));
             break;
         case 10: 
-            set_reg8(7, read_byte(get_16mem((byte >> 4) & LO_2)));
+            set_r8(7, read_byte(get_16mem((byte >> 4) & LO_2)));
             break;
         case 8: {
             uint16_t imm16 = (((uint16_t)read_byte(++pc)) << 8) | read_byte(++pc);
-            set_reg16(imm16, sp);
+            set_r16(imm16, sp);
             break;
         }
         case 3:
-            add_reg16((byte >> 4) & LO_2, 1);
+            add_r16((byte >> 4) & LO_2, 1);
             break;
         case 11:
-            add_reg16((byte >> 4) & LO_2, -1);
+            add_r16((byte >> 4) & LO_2, -1);
             break; 
         case 9:
-            hl += get_reg16((byte >> 4) & LO_2);
+            hl += get_r16((byte >> 4) & LO_2);
+            break;
+        case 4:
+            add_r8((byte >> 3) & LO_3, 1);
+            break;
+        case 12:
+            add_r8((byte >> 3) & LO_3, 1);
+            break;
+        case 5:
+            add_r8((byte >> 3) & LO_3, -1);
+            break;
+        case 13: 
+            add_r8((byte >> 3) & LO_3, -1);
+            break;
     }
 }
 

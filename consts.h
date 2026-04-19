@@ -20,6 +20,7 @@ const uint16_t LO_14 = (1 << 14) - 1;
 const uint8_t LO_8 = 255;
 const uint16_t HI_8 = LO_8 << 8;
 const uint8_t LO_4 = 15;
+const uint8_t LO_3 = 7;
 const uint8_t LO_2 = 3;
 
 #endif
