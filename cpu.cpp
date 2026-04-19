@@ -308,8 +308,29 @@ void run00(uint8_t byte) {
                     flags[1] = 0; flags[2] = 0; flags[3] = 0;
                     a = ((a & LO_7) << 1) | tc;
                     break;
-                case 2:
-                    break;
+                case 2: {
+                    // yoinked from: https://blog.ollien.com/posts/gb-daa/ 
+                    uint8_t offset = 0;
+                    if ((!flags[2] && (a & LO_4) > 9) || flags[1]) {
+                        offset = 6;
+                    }
+                    if ((!flags[2] && a > 153) || flags[0]) {
+                        offset |= 96; 
+                        flags[0] = 1;
+                    }
+                    
+                    if (!flags[2]) {
+                        a += offset;
+                    }
+                    else {
+                        a -= offset;
+                    }
+
+                    flags[1] = 0;
+                    flags[3] = !a;
+                    flags[0] = a > 153; 
+                    break; 
+                } 
                 case 3: 
                     break;
                 default:
