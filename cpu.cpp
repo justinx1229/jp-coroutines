@@ -63,9 +63,9 @@ void add_r8(uint8_t r, uint8_t val) {
         case 0: {
             // b
             uint8_t b = (bc >> 8);
-            uint8_t out = b + val;
-            bc = (bc & LO_8) | ((uint16_t)(out) << 8); 
-            flags[3] = !out;
+            uint8_t res = b + val;
+            bc = (bc & LO_8) | ((uint16_t)(res) << 8); 
+            flags[3] = !res;
             flags[2] = 0;
             flags[1] = (b & LO_4) + (val & LO_4) > LO_4;
             break;
@@ -73,9 +73,9 @@ void add_r8(uint8_t r, uint8_t val) {
         case 1: {
             // c
             uint8_t c = bc & LO_8;
-            uint8_t out = c + val;
-            bc = (bc & HI_8) | out;
-            flags[3] = !out;
+            uint8_t res = c + val;
+            bc = (bc & HI_8) | res;
+            flags[3] = !res;
             flags[2] = 0;
             flags[1] = (c & LO_4) + (val & LO_4) > LO_4;
             break;
@@ -83,9 +83,9 @@ void add_r8(uint8_t r, uint8_t val) {
         case 2: {
             // d
             uint8_t d = de >> 8;
-            uint8_t out = d + val;
-            de = (de & LO_8) | (((uint16_t)(out)) << 8);
-            flags[3] = !out; 
+            uint8_t res = d + val;
+            de = (de & LO_8) | (((uint16_t)(res)) << 8);
+            flags[3] = !res; 
             flags[2] = 0;
             flags[1] = (d & LO_4) + (val & LO_4) > LO_4;
             break;
@@ -93,9 +93,9 @@ void add_r8(uint8_t r, uint8_t val) {
         case 3: {
             // e
             uint8_t e = de & LO_8;
-            uint8_t out = e + val;
-            de = (de & HI_8) | out;
-            flags[3] = !out;
+            uint8_t res = e + val;
+            de = (de & HI_8) | res;
+            flags[3] = !res;
             flags[2] = 0;
             flags[1] = (e & LO_4) + (val & LO_4) > LO_4;
             break;
@@ -103,9 +103,9 @@ void add_r8(uint8_t r, uint8_t val) {
         case 4: {
             // h
             uint8_t h = hl >> 8;
-            uint8_t out = h + val;
-            hl = (hl & LO_8) | (((uint16_t)(out)) << 8);
-            flags[3] = !out; 
+            uint8_t res = h + val;
+            hl = (hl & LO_8) | (((uint16_t)(res)) << 8);
+            flags[3] = !res; 
             flags[2] = 0;
             flags[1] = (h & LO_4) + (val & LO_4) > LO_4;
             break;
@@ -113,9 +113,9 @@ void add_r8(uint8_t r, uint8_t val) {
         case 5: {
             // l
             uint8_t l = hl & LO_8;
-            uint8_t out = l + val;
-            hl = (hl & HI_8) | out;
-            flags[3] = !out;
+            uint8_t res = l + val;
+            hl = (hl & HI_8) | res;
+            flags[3] = !res;
             flags[2] = 0;
             flags[1] = (l & LO_4) + (val & LO_4) > LO_4;
             break;
@@ -123,9 +123,9 @@ void add_r8(uint8_t r, uint8_t val) {
         case 6: {
             // [hl]
             uint8_t hl_v = read_byte(hl);
-            uint8_t out = hl_v + val;
-            write_byte(hl, out);
-            flags[3] = !out;
+            uint8_t res = hl_v + val;
+            write_byte(hl, res);
+            flags[3] = !res;
             flags[2] = 0;
             flags[1] = (hl_v & LO_4) + (val & LO_4) > LO_4;
             break;
@@ -337,22 +337,22 @@ void run10(uint8_t byte) {
 
     switch (op) {
         case 0: {
-            uint16_t out = (uint16_t)a + val;
-            flags[3] = !(out & LO_8);
+            uint16_t res = (uint16_t)a + val;
+            flags[3] = !(res & LO_8);
             flags[2] = 0;
             flags[1] = ((a & LO_4) + (val & LO_4)) > LO_4;
-            flags[0] = out > LO_8;
-            a = out & LO_8;
+            flags[0] = res > LO_8;
+            a = res & LO_8;
             break;
         }
         case 1: {
             uint8_t carry = flags[0];
-            uint16_t out = (uint16_t)a + val + carry;
-            flags[3] = !(out & LO_8);
+            uint16_t res = (uint16_t)a + val + carry;
+            flags[3] = !(res & LO_8);
             flags[2] = 0;
             flags[1] = ((a & LO_4) + (val & LO_4) + carry) > LO_4;
-            flags[0] = out > LO_8;
-            a = out & LO_8;
+            flags[0] = res > LO_8;
+            a = res & LO_8;
             break;
         }
         case 2: {
