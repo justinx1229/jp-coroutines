@@ -387,7 +387,7 @@ void run_cb(uint8_t byte) {
                     uint8_t r = byte & LO_3;
                     uint8_t v = get_r8(r);
                     flags[0] = v & 1;
-                    v = (v >> 1) | (v & 127);
+                    v = (v >> 1) | (v & 128);
                     flags[3] = !v;
                     flags[1] = 0; flags[2] = 0;
                     set_r8(r, v);
@@ -408,7 +408,8 @@ void run_cb(uint8_t byte) {
                     flags[0] = v & 1;
                     v >>= 1;
                     flags[3] = !v;
-                    flags[0] = 0; flags[1] = 0;
+                    flags[1] = 0; flags[2] = 0;
+                    set_r8(r, v);
                     break;
                 }
             }
@@ -418,7 +419,7 @@ void run_cb(uint8_t byte) {
             uint8_t bit = (byte >> 3) & LO_3;
             uint8_t r = byte & LO_3;
             flags[3] = !((get_r8(r) >> bit) & 1);
-            flags[2] = 0; flags[1] = 0;
+            flags[2] = 0; flags[1] = 1;
             break;
         }
         case 2: {
@@ -487,8 +488,8 @@ void run00(uint8_t byte) {
         case 5: {
             uint8_t r = (byte >> 3) & LO_3;
             uint8_t v = get_r8(r);
-            flags[1] = (LO_4 + (v & LO_4)) > LO_4;
-            flags[2] = 0;
+            flags[1] = !(v & LO_4);
+            flags[2] = 1;
             flags[3] = !(--v);
             set_r8(r, v);
             break;
@@ -496,8 +497,8 @@ void run00(uint8_t byte) {
         case 13: {
             uint8_t r = (byte >> 3) & LO_3;
             uint8_t v = get_r8(r);
-            flags[1] = (LO_4 + (v & LO_4)) > LO_4;
-            flags[2] = 0;
+            flags[1] = !(v & LO_4);
+            flags[2] = 1;
             flags[3] = !(--v);
             set_r8(r, v);
             break;
@@ -525,26 +526,29 @@ void run00(uint8_t byte) {
                     break;
                 }
                 case 2: {
-                    // yoinked from: https://blog.ollien.com/posts/gb-daa/ 
-                    uint8_t offset = 0;
-                    if ((!flags[2] && (a & LO_4) > 9) || flags[1]) {
-                        offset = 6;
-                    }
-                    if ((!flags[2] && a > 153) || flags[0]) {
-                        offset |= 96; 
-                        flags[0] = 1;
-                    }
-                    
+                    bool carry = flags[0];
+
                     if (!flags[2]) {
-                        a += offset;
+                        if (carry || a > 0x99) {
+                            a += 0x60;
+                            carry = true;
+                        }
+                        if (flags[1] || (a & 0x0F) > 0x09) {
+                            a += 0x06;
+                        }
                     }
                     else {
-                        a -= offset;
+                        if (carry) {
+                            a -= 0x60;
+                        }
+                        if (flags[1]) {
+                            a -= 0x06;
+                        }
                     }
 
+                    flags[0] = carry;
                     flags[1] = 0;
                     flags[3] = !a;
-                    flags[0] = a > 153; 
                     break; 
                 } 
                 case 3: {
@@ -596,23 +600,35 @@ void run00(uint8_t byte) {
         }
         case 8: {
             if (byte == 8) {
-                set_r16(next16(), sp);
+                write16(next16(), sp);
             }
             else if (byte == 24) {
-                uint8_t imm8 = next8();
+                int8_t imm8 = (int8_t)next8();
                 pc += imm8;
             }
             else if ((byte >> 5) == 1) {
-                uint8_t imm8 = next8();
-                switch (byte & (1 << 4)) {
+                int8_t imm8 = (int8_t)next8();
+                switch ((byte >> 3) & LO_2) {
                     case 0: {
+                        if (!flags[3]) {
+                            pc += imm8;
+                        }
+                        break;
+                    }
+                    case 1: {
+                        if (flags[3]) {
+                            pc += imm8;
+                        }
+                        break;
+                    }
+                    case 2: {
                         if (!flags[0]) {
                             pc += imm8;
                         }
                         break;
                     }
-                    case 16: {
-                        if (flags[3]) {
+                    case 3: {
+                        if (flags[0]) {
                             pc += imm8;
                         }
                         break;
@@ -627,18 +643,31 @@ void run00(uint8_t byte) {
         }
         case 0: {
             if ((byte >> 5) == 1) {
-                uint8_t imm8 = next8();
-                switch (byte & (1 << 4)) {
+                int8_t imm8 = (int8_t)next8();
+                switch ((byte >> 3) & LO_2) {
                     case 0: {
-                        if (flags[0]) {
+                        if (!flags[3]) {
                             pc += imm8;
                         }
                         break;
                     }
-                    case 16: {
-                        if (!flags[3]) {
+                    case 1: {
+                        if (flags[3]) {
                             pc += imm8;
                         }
+                        break;
+                    }
+                    case 2: {
+                        if (!flags[0]) {
+                            pc += imm8;
+                        }
+                        break;
+                    }
+                    case 3: {
+                        if (flags[0]) {
+                            pc += imm8;
+                        }
+                        break;
                     }
                 }
                 break;
@@ -799,8 +828,9 @@ void run11(uint8_t byte) {
         }
         // return stuff
         case 0b11001001:
-            pc = read_byte(sp | (((uint16_t)read_byte(sp + 1)) << 8));
-            sp += 2; 
+            pc = read_byte(sp) | (((uint16_t)read_byte(sp + 1)) << 8);
+            sp += 2;
+            break;
         case 0b11011001:
             pc = read_byte(sp) | (((uint16_t)read_byte(sp + 1)) << 8);
             sp += 2;
