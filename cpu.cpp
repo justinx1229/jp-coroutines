@@ -345,7 +345,7 @@ void run00(uint8_t byte) {
             }
             break;
         }
-        case 15:
+        case 15: {
             uint8_t hi_4 = byte >> 4;
             switch (hi_4) {
                 case 0: {
@@ -379,6 +379,8 @@ void run00(uint8_t byte) {
                     break;
             }
             break;
+        }
+         
     }
 }
 
