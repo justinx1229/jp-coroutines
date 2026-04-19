@@ -577,6 +577,10 @@ void run10(uint8_t byte) {
 }
 
 void run() {
+    if (stopped) {
+        return;
+    }
+    
     uint8_t byte = next8();
     switch (byte) {
         case 0:
