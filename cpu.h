@@ -8,6 +8,8 @@
 #include <string>
 #include <cstdint>
 
+extern uint8_t flags[4];
+
 void run();
 
 #endif

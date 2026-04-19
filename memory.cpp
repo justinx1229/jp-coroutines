@@ -25,17 +25,6 @@ uint8_t read_byte(uint16_t address) {
     return 0;
 }
 
-void add_byte(uint16_t address, uint8_t byte) {
-    // neither the 14th nor 15th bits should be set (gives ROM bank 00)
-    if (!(address & RB0_MASK)) {
-        ROM_bank_00[address] += byte;
-    }
-    // 14th bit is set, 15th bit should not be set (gives switchable ROM bank)
-    else if ((address & (1 << 14)) && !(address & (1 << 15))) {
-        ROM_bank_01_NN[address & LO_14] += byte;
-    }
-}
-
 void write_byte(uint16_t address, uint8_t byte) {
     // neither the 14th nor 15th bits should be set (gives ROM bank 00)
     if (!(address & RB0_MASK)) {

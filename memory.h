@@ -18,8 +18,6 @@ const uint16_t RB0_MASK = (1 << 14) | (1 << 15);
 
 uint8_t read_byte(uint16_t address);
 
-void add_byte(uint16_t address, uint8_t byte);
-
 void write_byte(uint16_t address, uint8_t byte);
 
 void write16(uint16_t address, uint16_t val);

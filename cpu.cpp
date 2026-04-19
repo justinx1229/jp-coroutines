@@ -6,7 +6,8 @@ uint16_t pc = 0;
 uint16_t sp = 0;
 
 // regs
-uint16_t af = 0;
+uint8_t a; 
+uint8_t flags[4];
 uint16_t bc = 0;
 uint16_t de = 0;
 uint16_t hl = 0;
@@ -51,7 +52,7 @@ uint8_t get_r8(uint8_t r) {
             break;
         case 7:
             // a
-            return (af >> 8);
+            a;
             break;
     }
 
@@ -60,38 +61,85 @@ uint8_t get_r8(uint8_t r) {
 
 void add_r8(uint8_t r, uint8_t val) {
     switch (r) {
-        case 0:
+        case 0: {
             // b
-            bc = (bc & LO_8) | (((uint16_t)(((uint8_t)(bc >> 8)) + 1)) << 8); 
+            uint8_t b = (bc >> 8);
+            uint8_t res = b + val;
+            bc = (bc & LO_8) | ((uint16_t)(res) << 8); 
+            flags[3] = !res;
+            flags[2] = 0;
+            flags[1] = (b & LO_4) + (val & LO_4) > LO_4;
             break;
-        case 1:
+        }
+        case 1: {
             // c
-            bc = (bc & HI_8) | (((uint8_t)(bc & LO_8)) + 1);
+            uint8_t c = bc & LO_8;
+            uint8_t res = c + val;
+            bc = (bc & HI_8) | res;
+            flags[3] = !res;
+            flags[2] = 0;
+            flags[1] = (c & LO_4) + (val & LO_4) > LO_4;
             break;
-        case 2: 
+        }
+        case 2: {
             // d
-            de = (de & LO_8) | (((uint16_t)(((uint8_t)(de >> 8)) + 1)) << 8); 
+            uint8_t d = de >> 8;
+            uint8_t res = d + val;
+            de = (de & LO_8) | (((uint16_t)(res)) << 8);
+            flags[3] = !res; 
+            flags[2] = 0;
+            flags[1] = (d & LO_4) + (val & LO_4) > LO_4;
             break;
-        case 3: 
+        }
+        case 3: {
             // e
-            de = (de & HI_8) | (((uint8_t)(de & LO_8)) + 1);
+            uint8_t e = de & LO_8;
+            uint8_t res = e + val;
+            de = (de & HI_8) | res;
+            flags[3] = !res;
+            flags[2] = 0;
+            flags[1] = (e & LO_4) + (val & LO_4) > LO_4;
             break;
-        case 4:
+        }
+        case 4: {
             // h
-            hl = (hl & LO_8) | (((uint16_t)(((uint8_t)(hl >> 8)) + 1)) << 8); 
+            uint8_t h = hl >> 8;
+            uint8_t res = h + val;
+            hl = (hl & LO_8) | (((uint16_t)(res)) << 8);
+            flags[3] = !res; 
+            flags[2] = 0;
+            flags[1] = (h & LO_4) + (val & LO_4) > LO_4;
             break;
-        case 5:
+        }
+        case 5: {
             // l
-            hl = (hl & HI_8) | (((uint8_t)(hl & LO_8)) + 1);
+            uint8_t l = hl & LO_8;
+            uint8_t res = l + val;
+            hl = (hl & HI_8) | res;
+            flags[3] = !res;
+            flags[2] = 0;
+            flags[1] = (l & LO_4) + (val & LO_4) > LO_4;
             break;
-        case 6:
+        }
+        case 6: {
             // [hl]
-            add_byte(hl, val);
+            uint8_t hl_v = read_byte(hl);
+            uint8_t res = hl_v + val;
+            write_byte(hl, res);
+            flags[3] = !res;
+            flags[2] = 0;
+            flags[1] = (hl_v & LO_4) + (val & LO_4) > LO_4;
             break;
-        case 7:
+        }
+        case 7: {
             // a
-            af = (af & LO_8) | (((uint16_t)(((uint8_t)(af >> 8)) + 1)) << 8); 
+            uint8_t ta = a;
+            a += val;
+            flags[3] = !a;
+            flags[2] = 0;
+            flags[1] = (ta & LO_4) + (val & LO_4) > LO_4;
             break;
+        }
     }
 }
 
@@ -119,7 +167,7 @@ void set_r8(uint8_t r, uint16_t v) {
             write_byte(hl, v);
             break;
         case 7:
-            af = (af & LO_8) | (v << 8);
+            a = v;
             break;
     }
 }
