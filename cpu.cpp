@@ -14,23 +14,46 @@ uint16_t hl = 0;
 uint8_t get_reg8(uint8_t r) {
     switch (r) {
         case 0:
+            // b
             return (bc >> 8);
         case 1:
+            // c
             return bc & LO_8;
         case 2: 
+            // d
             return (de >> 8);
         case 3: 
+            // e
             return de & LO_8;
         case 4:
+            // h
             return (hl >> 8);
         case 5:
+            // l
             return hl & LO_8;
         case 6:
+            // [hl]
             return read_byte(hl);
         case 7:
+            // a
             return (af >> 8);
     }
 
+    return 0;
+}
+
+uint16 get_16mem(uint8_t r) {
+    switch (r) {
+        case 0: 
+            return bc;
+        case 1:
+            return de;
+        case 2:
+            return hl++;
+        case 3:
+            return hl--;
+    }
+    
     return 0;
 }
 
@@ -63,8 +86,11 @@ void run00(uint8_t byte) {
             break;
         }
         case 2:
-            // write16();
+            write16(get_16mem((byte >> 4) & LO_2), get_reg8(7));
             break;
+        case 3: 
+            set_reg8(7, read_byte(get_16mem((byte >> 4) & LO_2)));
+            
     }
 }
 
