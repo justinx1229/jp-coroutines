@@ -1,5 +1,5 @@
-#ifndef CPU 
-#define CPU 
+
+#pragma once
 
 #include "consts.h"
 
@@ -10,6 +10,6 @@
 
 extern uint8_t flags[4];
 
-void run();
+void reset_cpu();
 
-#endif
+void run();

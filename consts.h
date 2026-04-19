@@ -1,5 +1,5 @@
-#ifndef CONSTS 
-#define CONSTS
+
+#pragma once
 
 #include <SDL2/SDL.h>
 #include <iostream>
@@ -25,5 +25,3 @@ const uint8_t LO_7 = 127;
 const uint8_t LO_4 = 15;
 const uint8_t LO_3 = 7;
 const uint8_t LO_2 = 3;
-
-#endif

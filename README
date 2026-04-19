@@ -8,3 +8,6 @@ g++ *.cpp $(sdl2-config --cflags --libs)
 
 RUN:
 ./a.out <rom.gb>
+
+HEADLESS (no GUI):
+./a.out <rom.gb> --headless

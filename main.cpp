@@ -1,4 +1,5 @@
 #include "consts.h"
+#include "cpu.h"
 #include "memory.h"
 
 // taken from: 
@@ -19,11 +20,12 @@ std::vector<uint8_t> read_file(std::string filename) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <rom.gb>\n";
+        std::cerr << "Usage: " << argv[0] << " <rom.gb> [--headless]\n";
         return 1;
     }
 
     std::string rom_path = argv[1];
+    bool headless = argc >= 3 && std::string(argv[2]) == "--headless";
 
     // rom
     std::vector<uint8_t> bytes = read_file(rom_path);
@@ -31,8 +33,16 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    reset_memory();
     for (uint32_t i = 0; i < bytes.size(); i++) {
         write_byte(i, bytes[i]);
+    }
+    reset_cpu();
+
+    if (headless) {
+        while (true) {
+            run();
+        }
     }
 
     // Code used from: https://wiki.libsdl.org/SDL3/SDL_CreateWindow 
@@ -72,6 +82,10 @@ int main(int argc, char* argv[]) {
             if (event.type == SDL_QUIT) {
                 done = true;
             }
+        }
+
+        for (int i = 0; i < 10000; i++) {
+            run();
         }
     }
 

@@ -15,6 +15,24 @@ uint16_t hl = 0;
 bool stopped = false;
 uint8_t wake = 0;
 
+void reset_cpu() {
+    pc = 0x0100;
+    sp = 0xFFFE;
+
+    a = 0x01;
+    flags[3] = 1;
+    flags[2] = 0;
+    flags[1] = 1;
+    flags[0] = 1;
+
+    bc = 0x0013;
+    de = 0x00D8;
+    hl = 0x014D;
+
+    stopped = false;
+    wake = 0;
+}
+
 uint8_t next8() {
     return read_byte(pc++);
 }
@@ -886,7 +904,7 @@ void run() {
             }
             break;
         case CB: 
-            run_cb(byte);
+            run_cb(next8());
             break;
         default:
             // casework on first 2 bits
