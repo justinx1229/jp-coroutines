@@ -203,7 +203,7 @@ void run_cb() {
 void run00(uint8_t byte) {
     switch (byte & LO_4) {
         case 1: {
-            set_r16((byte >> 4) & LO_2, next16);
+            set_r16((byte >> 4) & LO_2, next16());
             break;
         }
         case 2:
@@ -213,7 +213,7 @@ void run00(uint8_t byte) {
             set_r8(7, read_byte(get_16mem((byte >> 4) & LO_2)));
             break;
         case 8: {
-            set_r16(next16, sp);
+            set_r16(next16(), sp);
             break;
         }
         case 3:
