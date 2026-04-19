@@ -52,8 +52,7 @@ uint8_t get_r8(uint8_t r) {
             break;
         case 7:
             // a
-            a;
-            break;
+            return a;
     }
 
     return 0;
@@ -383,6 +382,95 @@ void run00(uint8_t byte) {
     }
 }
 
+void run01(uint8_t byte) {
+    if (byte == 0x76) {
+        // TODO: halt
+        return;
+    }
+
+    uint8_t dest = (byte >> 3) & LO_3;
+    uint8_t src = byte & LO_3;
+
+    set_r8(dest, get_r8(src));
+}
+
+void run10(uint8_t byte) {
+    uint8_t op = (byte >> 3) & LO_3;
+    uint8_t src = byte & LO_3;
+    uint8_t val = get_r8(src);
+
+    switch (op) {
+        case 0: {
+            uint16_t res = (uint16_t)a + val;
+            flags[3] = !(res & LO_8);
+            flags[2] = 0;
+            flags[1] = ((a & LO_4) + (val & LO_4)) > LO_4;
+            flags[0] = res > LO_8;
+            a = res & LO_8;
+            break;
+        }
+        case 1: {
+            uint8_t carry = flags[0];
+            uint16_t res = (uint16_t)a + val + carry;
+            flags[3] = !(res & LO_8);
+            flags[2] = 0;
+            flags[1] = ((a & LO_4) + (val & LO_4) + carry) > LO_4;
+            flags[0] = res > LO_8;
+            a = res & LO_8;
+            break;
+        }
+        case 2: {
+            uint8_t old_a = a;
+            a = old_a - val;
+            flags[3] = !a;
+            flags[2] = 1;
+            flags[1] = (old_a & LO_4) < (val & LO_4);
+            flags[0] = old_a < val;
+            break;
+        }
+        case 3: {
+            uint8_t carry = flags[0];
+            uint16_t subtrahend = (uint16_t)val + carry;
+            uint8_t old_a = a;
+            a = old_a - subtrahend;
+            flags[3] = !a;
+            flags[2] = 1;
+            flags[1] = (old_a & LO_4) < ((val & LO_4) + carry);
+            flags[0] = old_a < subtrahend;
+            break;
+        }
+        case 4:
+            a &= val;
+            flags[3] = !a;
+            flags[2] = 0;
+            flags[1] = 1;
+            flags[0] = 0;
+            break;
+        case 5:
+            a ^= val;
+            flags[3] = !a;
+            flags[2] = 0;
+            flags[1] = 0;
+            flags[0] = 0;
+            break;
+        case 6:
+            a |= val;
+            flags[3] = !a;
+            flags[2] = 0;
+            flags[1] = 0;
+            flags[0] = 0;
+            break;
+        case 7: {
+            uint8_t old_a = a;
+            flags[3] = !(uint8_t)(old_a - val);
+            flags[2] = 1;
+            flags[1] = (old_a & LO_4) < (val & LO_4);
+            flags[0] = old_a < val;
+            break;
+        }
+    }
+}
+
 void run() {
     uint8_t byte = next8();
     switch (byte) {
@@ -399,10 +487,10 @@ void run() {
                     run00(byte);
                     break;
                 case 1:
-                    // run01(byte); 
+                    run01(byte); 
                     break;
                 case 2: 
-                    // run10(byte);
+                    run10(byte);
                     break;
                 case 3:
                     // run11(byte);
