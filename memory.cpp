@@ -1,5 +1,6 @@
 
 #include "memory.h"
+#include "timer.h"
 #include <cstring>
 
 uint8_t ROM_bank_00[SIZE_ROM_BANK];
@@ -28,6 +29,7 @@ void reset_memory() {
     memset(regs, 0, sizeof(regs));
     memset(HRAM, 0, sizeof(HRAM));
     IE = 0;
+    reset_timer();
 }
 
 uint8_t read_byte(uint16_t address) {
@@ -104,6 +106,7 @@ void write_byte(uint16_t address, uint8_t byte) {
     }
     else if (address >= 0xFF00 && address < 0xFF80) {
         regs[address - 0xFF00] = byte;
+        timer_write(address, byte);
 
         // Blargg tests print to the serial port by writing a byte to SB and then writing 0x81 to SC.
         // idk how this works lowkey but it does so here we are

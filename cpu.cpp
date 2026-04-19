@@ -1,5 +1,7 @@
 #include "memory.h"
 #include "cpu.h"
+#include "timer.h"
+#include "interrupts.h"
 
 // pc, sp
 uint16_t pc = 0;
@@ -12,9 +14,6 @@ uint16_t bc = 0;
 uint16_t de = 0;
 uint16_t hl = 0;
 
-bool halt = false;
-bool set_ime = false;
-bool ime = false; 
 bool stopped = false;
 uint8_t wake = 0;
 
@@ -32,6 +31,7 @@ void reset_cpu() {
     de = 0x00D8;
     hl = 0x014D;
 
+    reset_interrupt();
     stopped = false;
     wake = 0;
 }
@@ -181,6 +181,150 @@ void add_r16(uint8_t r, uint8_t val) {
             sp += val;
             break;
     }
+}
+
+bool check_cond(uint8_t cond) {
+    switch (cond) {
+        case 0:
+            return !flags[3];
+        case 1:
+            return flags[3];
+        case 2:
+            return !flags[0];
+        case 3:
+            return flags[0];
+    }
+
+    return false;
+}
+
+uint8_t estimate_cycles(uint8_t byte, uint8_t cb_byte) {
+    if (byte == 0x00 || byte == 0x10) {
+        return 1;
+    }
+
+    if (byte == CB) {
+        return (cb_byte & LO_3) == 6 ? 4 : 2;
+    }
+
+    switch (byte >> 6) {
+        case 0:
+            switch (byte & LO_4) {
+                case 1:
+                    return 3;
+                case 2:
+                case 10:
+                case 3:
+                case 11:
+                case 9:
+                    return 2;
+                case 4:
+                case 5:
+                case 12:
+                case 13:
+                    return ((byte >> 3) & LO_3) == 6 ? 3 : 1;
+                case 6:
+                case 14:
+                    return ((byte >> 3) & LO_3) == 6 ? 3 : 2;
+                case 7:
+                case 15:
+                    return 1;
+                case 8:
+                    if (byte == 0x08) {
+                        return 5;
+                    }
+                    if (byte == 0x18) {
+                        return 3;
+                    }
+                    return check_cond((byte >> 3) & LO_2) ? 3 : 2;
+                case 0:
+                    return check_cond((byte >> 3) & LO_2) ? 3 : 2;
+            }
+            break;
+        case 1:
+            if (byte == 0x76) {
+                return 1;
+            }
+            return (((byte >> 3) & LO_3) == 6 || (byte & LO_3) == 6) ? 2 : 1;
+        case 2:
+            return (byte & LO_3) == 6 ? 2 : 1;
+        case 3:
+            switch (byte) {
+                case 0xC6:
+                case 0xCE:
+                case 0xD6:
+                case 0xDE:
+                case 0xE6:
+                case 0xEE:
+                case 0xF6:
+                case 0xFE:
+                    return 2;
+                case 0xC0:
+                case 0xC8:
+                case 0xD0:
+                case 0xD8:
+                    return check_cond((byte >> 3) & LO_2) ? 5 : 2;
+                case 0xC9:
+                case 0xD9:
+                    return 4;
+                case 0xC2:
+                case 0xCA:
+                case 0xD2:
+                case 0xDA:
+                    return check_cond((byte >> 3) & LO_2) ? 4 : 3;
+                case 0xC3:
+                    return 4;
+                case 0xE9:
+                    return 1;
+                case 0xC4:
+                case 0xCC:
+                case 0xD4:
+                case 0xDC:
+                    return check_cond((byte >> 3) & LO_2) ? 6 : 3;
+                case 0xCD:
+                    return 6;
+                case 0xC7:
+                case 0xCF:
+                case 0xD7:
+                case 0xDF:
+                case 0xE7:
+                case 0xEF:
+                case 0xF7:
+                case 0xFF:
+                    return 4;
+                case 0xC1:
+                case 0xD1:
+                case 0xE1:
+                case 0xF1:
+                    return 3;
+                case 0xC5:
+                case 0xD5:
+                case 0xE5:
+                case 0xF5:
+                    return 4;
+                case 0xE0:
+                case 0xF0:
+                    return 3;
+                case 0xE2:
+                case 0xF2:
+                    return 2;
+                case 0xEA:
+                case 0xFA:
+                    return 4;
+                case 0xE8:
+                    return 4;
+                case 0xF8:
+                    return 3;
+                case 0xF9:
+                    return 2;
+                case 0xF3:
+                case 0xFB:
+                    return 1;
+            }
+            break;
+    }
+
+    return 1;
 }
 
 void run_cb(uint8_t byte) {
@@ -509,15 +653,15 @@ void run00(uint8_t byte) {
 }
 
 void run01(uint8_t byte) {
-    if (byte == 0x76) {
-        if (!ime) {
-            uint8_t ie_ = read_byte(0xFFFF);
-            uint8_t if_ = read_byte(0xFF0F);
-            if (!(ie_ & if_)) {
-                halt = true;
+        if (byte == 0x76) {
+            if (!is_ime()) {
+                uint8_t ie_ = read_byte(0xFFFF);
+                uint8_t if_ = read_byte(0xFF0F);
+                if (!(ie_ & if_)) {
+                    set_halt(true);
+                }
             }
-        }
-        return;
+            return;
     }
 
     uint8_t dest = (byte >> 3) & LO_3;
@@ -660,7 +804,7 @@ void run11(uint8_t byte) {
         case 0b11011001:
             pc = read_byte(sp) | (((uint16_t)read_byte(sp + 1)) << 8);
             sp += 2;
-            set_ime = true;
+            set_sime();
             break;
         // cond jump
         case 0b11000010:
@@ -873,11 +1017,11 @@ void run11(uint8_t byte) {
             break;
         // di
         case 0b11110011:
-            ime = false;
+            disable_interrupts();
             break;
         // ei
         case 0b11111011:
-            ime = true;
+            set_sime();
             break;
         // invalid opcodes
         case 0b11010011:
@@ -901,36 +1045,33 @@ void run11(uint8_t byte) {
     }
 }
 
-void handle_interrupt() {
-    uint8_t ie_ = read_byte(0xFFFF);
-    uint8_t if_ = read_byte(0xFF0F);
-    if (ie_ & if_) {
-        halt = false;
-    }
-    if (ime) {
-        if (ie_ & if_) {
-            for (int i = 0; i < 5; i++) {
-                if ((ie_ & if_ & (1 << i))) {
-                    write_byte(--sp, pc >> 8);
-                    write_byte(--sp, pc & LO_8);
-                    pc = I_JUMPS[i];
-                    write_byte(0xFF0F, read_byte(0xFF0F) & (~(1 << i)));
-                }
-            }
-        }
-    }
-}
-
 void run() {
     if (stopped) {
         return;
     }
-    
-    if (!halt) {
+
+    uint8_t interrupt_cycles = handle_interrupt(pc, sp);
+    if (interrupt_cycles) {
+        tick_timer(interrupt_cycles);
+        sime_to_ime();
+        return;
+    }
+
+    uint8_t m_cycles = 1;
+
+    if (!is_halt()) {
         uint8_t byte = next8();
+        uint8_t cb_byte = 0;
+
+        if (byte == CB) {
+            cb_byte = read_byte(pc);
+        }
+
+        m_cycles = estimate_cycles(byte, cb_byte);
+
         switch (byte) {
             case 0:
-                return;
+                break;
                 break;
             case 16:
                 // stop, TODO
@@ -960,13 +1101,12 @@ void run() {
                 break;
         }
     }
-
-    // handle_timer();
-
-    handle_interrupt(); 
-
-    if (set_ime) {
-        ime = true;
-        set_ime = false;
+    else {
+        tick_timer(1);
+        sime_to_ime();
+        return;
     }
+
+    tick_timer(m_cycles);
+    sime_to_ime();
 }
