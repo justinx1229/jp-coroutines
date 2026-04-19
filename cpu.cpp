@@ -380,7 +380,58 @@ void run00(uint8_t byte) {
             }
             break;
         }
-         
+        case 8: {
+            if (byte == 24) {
+                uint8_t imm8 = next8();
+                pc += imm8;
+            }
+            else if ((byte >> 5) == 1) {
+                uint8_t imm8 = next8();
+                switch (byte & (1 << 4)) {
+                    case 0: {
+                        if (!flags[0]) {
+                            pc += imm8;
+                        }
+                        break;
+                    }
+                    case 16: {
+                        if (flags[3]) {
+                            pc += imm8;
+                        }
+                        break;
+                    }
+                }
+            }
+            else {
+                std::cerr << "Invalid instruction " << std::bitset<8>(byte).to_string() << " at pc " << pc << "\n";
+                exit(1);
+            }
+            break;
+        }
+        case 0: {
+            if ((byte >> 5) == 1) {
+                uint8_t imm8 = next8();
+                switch (byte & (1 << 4)) {
+                    case 0: {
+                        if (flags[0]) {
+                            pc += imm8;
+                        }
+                        break;
+                    }
+                    case 16: {
+                        if (!flags[3]) {
+                            pc += imm8;
+                        }
+                    }
+                }
+                break;
+            }
+            else {
+                std::cerr << "Invalid instruction " << std::bitset<8>(byte).to_string() << " at pc " << pc << "\n";
+                exit(1);
+            }
+            break;
+        }
     }
 }
 
