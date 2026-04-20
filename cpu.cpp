@@ -166,7 +166,7 @@ void set_r16(uint8_t r, uint16_t val) {
     }
 }
 
-void add_r16(uint8_t r, uint8_t val) {
+void add_r16(uint8_t r, int16_t val) {
     switch (r) {
         case 0:
             bc += val;
@@ -461,10 +461,11 @@ void run00(uint8_t byte) {
             break; 
         case 9: {
             uint16_t thl = hl;
-            hl += get_r16((byte >> 4) & LO_2);
+            uint16_t val = get_r16((byte >> 4) & LO_2);
+            hl += val;
             flags[2] = 0;
-            flags[1] = (thl & LO_12) + (hl & LO_12) > LO_12;
-            flags[0] = ((uint32_t)thl + hl) > LO_16;
+            flags[1] = ((thl & LO_12) + (val & LO_12)) > LO_12;
+            flags[0] = ((uint32_t)thl + val) > LO_16;
             break;
         }
         case 4: {
