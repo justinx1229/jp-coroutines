@@ -11,6 +11,8 @@ enum class Mode {
 
 Mode mode = Mode::OAM;
 
+std::vector<std::array<uint8_t, 4>> sprites; 
+
 void f_lyc() {
     if (ly == lyc) {
         write_byte(0xFF41, read_byte(0xFF41) | (1 << 2));
@@ -45,6 +47,35 @@ void compute_mode() {
     }
 }
 
+void run_oam() {
+    if (oam_done) {
+        return;
+    }
+    if (read_byte(0xFF41) & (1 << 5)) {
+        write_byte(0xFF0F, read_byte(0xFF0F) & (1 << 1));
+    }
+
+    uint8_t height = ((read_byte(0xFF40) & (1 << 2)) ? 16 : 8);
+    
+    for (uint32_t i = 0xFE00; i < 0xFE9F; i += 4) {
+        uint8_t y_pos = read_byte(i);
+        uint8_t x_pos = read_byte(i + 1);
+        uint8_t tile_index = read_byte(i + 2);
+        uint8_t attributes = read_byte(i + 3);
+
+        if (ly + 16 >= y_pos && ly + 16 < y_pos + height) {
+            sprites.push_back({y_pos, x_pos, tile_index, attributes});
+        }
+
+        if (sprites.size() == 10) {
+            break;
+        }
+    }
+
+    oam_done = true;
+}
+
+
 void run_ppu(uint32_t m_cycles) {
     uint32_t t_cycles = 4 * m_cycles;
     // add dots
@@ -53,6 +84,7 @@ void run_ppu(uint32_t m_cycles) {
     // if dots is too big, start over. 
     if (dots >= 456) {
         dots -= 456;
+        oam_done = false;
         ly++;
         f_lyc(); 
     }
@@ -62,24 +94,25 @@ void run_ppu(uint32_t m_cycles) {
     uint8_t value;
     switch (mode) {
         case Mode::OAM: {
-            value = 2;
+            write_byte(0xFF41, (read_byte(0xFF41) & (LO_8 ^ LO_2)) | 2);
+            run_oam();
             break;
         }
         case Mode::DRAW: {
-            value = 3;
+            write_byte(0xFF41, (read_byte(0xFF41) & (LO_8 ^ LO_2)) | 3);
+            // run_draw();
             break;
         }
         case Mode::HBLANK: {
-            value = 0;
+            write_byte(0xFF41, (read_byte(0xFF41) & (LO_8 ^ LO_2)));
+            // run_hblank();
             break;
         }
         case Mode::VBLANK: {
-            value = 1;
+            write_byte(0xFF41, (read_byte(0xFF41) & (LO_8 ^ LO_2)) | 1);
+            // run_vblank();
             break;
         }
     }
     
-    // update STAT
-    write_byte(0xFF41, (read_byte(0xFF41) & (LO_8 ^ LO_2)) | value);
-
 }

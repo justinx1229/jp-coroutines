@@ -21,6 +21,7 @@ uint8_t ly;
 uint8_t lyc; 
 
 bool vram_bank = false;
+bool oam_done = false;
 
 void reset_memory() {
     memset(ROM_bank_00, 0, sizeof(ROM_bank_00));
@@ -124,7 +125,9 @@ void write_byte(uint16_t address, uint8_t byte) {
         WRAM_2[address - 0xF000] = byte;
     }
     else if (address < 0xFEA0) {
-        OAM[address - 0xFE00] = byte;
+        if (oam_done) {
+            OAM[address - 0xFE00] = byte;
+        }
     }
     else if (address >= 0xFF00 && address < 0xFF80) {
         regs[address - 0xFF00] = byte;
