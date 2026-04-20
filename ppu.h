@@ -5,4 +5,6 @@
 #include <vector>
 #include <array>
 
+extern uint32_t frame_buffer[HEIGHT][WIDTH];
+
 void run_ppu(uint32_t m_cycles);

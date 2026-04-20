@@ -13,7 +13,7 @@ Mode mode = Mode::OAM;
 
 std::vector<std::array<uint8_t, 4>> sprites; 
 uint8_t lcdc;
-uint32_t frame_buffer[WIDTH][HEIGHT];
+uint32_t frame_buffer[HEIGHT][WIDTH];
 
 void f_lyc() {
     if (ly == lyc) {

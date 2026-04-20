@@ -1,6 +1,8 @@
 #include "consts.h"
 #include "cpu.h"
+#include "display.h"
 #include "memory.h"
+#include "ppu.h"
 
 uint8_t cgb_mode;
 
@@ -74,6 +76,12 @@ int main(int argc, char* argv[]) {
         std::cerr << "Window not there: " << SDL_GetError() << "\n";
         return 1;
     }
+
+    if (!init_display(window)) {
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
     
     SDL_Event event;
 
@@ -89,8 +97,11 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < 10000; i++) {
             run();
         }
+
+        render_display(frame_buffer);
     }
 
+    destroy_display();
     SDL_DestroyWindow(window);
     SDL_Quit();
 
