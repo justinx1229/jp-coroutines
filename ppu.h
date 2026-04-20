@@ -4,4 +4,3 @@
 #include <vector>
 #include <array>
 
-extern bool oam_done;
