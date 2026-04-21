@@ -2,13 +2,6 @@
 
 uint32_t dots = 0;
 
-enum class Mode {
-    OAM,
-    DRAW,
-    HBLANK,
-    VBLANK
-};
-
 Mode mode = Mode::OAM;
 
 std::vector<std::array<uint8_t, 4>> sprites; 
@@ -40,6 +33,7 @@ void compute_mode() {
 
     if (ly == 144) {
         mode = Mode::VBLANK;
+        window = false;
         // vblank interrupt
         write_byte(0xFF0F, read_byte(0xFF0F) | 1);
     }
@@ -79,13 +73,23 @@ void run_oam() {
     run_done = false;
 }
 
-std::array<uint8_t, 17> get_tile_data(uint8_t tv) {
+std::array<uint8_t, 17> get_tile_data(uint8_t tv, bool is_window) {
     uint16_t base;
-    if (lcdc & (1 << 3)) {
-        base = 0x9C00;
+    if (!is_window) {
+        if (lcdc & (1 << 3)) {
+            base = 0x9C00;
+        }
+        else {
+            base = 0x9800;
+        }
     }
     else {
-        base = 0x9800;
+        if (lcdc & (1 << 6)) {
+            base = 0x9C00;
+        }
+        else {
+            base = 0x9800;
+        }
     }
 
     uint8_t tile_id = read_byte(base + tv);
@@ -121,8 +125,11 @@ std::array<uint8_t, 17> get_tile_data(uint8_t tv) {
 }
 
 void draw_bg() {
-    if (!(lcdc & 1)) {
-        memset(frame_buffer, 0, sizeof(frame_buffer));
+    if (cgb_mode && !(lcdc & 1)) {
+        for (uint8_t i = 0; i < WIDTH; i++) {
+            frame_buffer[ly][i] = GB_COLOR[0];
+        }
+        return;
     }
 
     uint8_t scx = read_byte(0xFF42);
@@ -134,7 +141,7 @@ void draw_bg() {
         x /= 8; y /= 8;
         uint8_t tile_id = x * 32 + y;
 
-        std::array<uint8_t, 17> tile_data = get_tile_data(tile_id);
+        std::array<uint8_t, 17> tile_data = get_tile_data(tile_id, false);
 
         if (cgb_mode) {
             uint8_t attribute = tile_data[16];
@@ -160,6 +167,28 @@ void draw_bg() {
     }
 }
 
+void draw_window() {
+    // X is row, y is col
+    uint8_t wx = read_byte(0xFF4A);
+    uint8_t wy = read_byte(0xFF4B);
+
+    if (wy >= ly) {
+        for (uint8_t i = 0; i < WIDTH; i++) {
+            if (wx - 7 >= i) {
+                uint8_t x = wy - ly;
+                uint8_t y = i - (wx - 7);
+
+                x /= 8; y /= 8;
+                uint8_t tile_id = x * 8 + y;
+
+                std::array<uint8_t, 17> tile_data = get_tile_data(tile_id, true);
+            }
+        }
+    }
+
+    
+}
+
 void run_draw() {
     if (run_done) {
         return;
@@ -168,8 +197,10 @@ void run_draw() {
 
     lcdc = read_byte(0xFF40);
 
-    if (!cgb_mode || lcdc & 1) {
-        draw_bg();
+    draw_bg();
+    
+    if ((lcdc & (1 << 5)) && (cgb_mode || (lcdc & 1))) {
+        draw_window();
     }
 }
 

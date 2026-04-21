@@ -25,6 +25,7 @@ uint8_t lyc;
 bool vram_bank = false;
 bool oam_done = true;
 bool run_done = true;
+bool window = false;
 
 void reset_memory() {
     memset(ROM_bank_00, 0, sizeof(ROM_bank_00));
@@ -134,7 +135,7 @@ void write_byte(uint16_t address, uint8_t byte) {
         WRAM_2[address - 0xF000] = byte;
     }
     else if (address < 0xFEA0) {
-        if (oam_done && run_done) {
+        if (mode != Mode::OAM && mode != Mode::DRAW) {
             OAM[address - 0xFE00] = byte;
         }
     }
@@ -152,6 +153,11 @@ void write_byte(uint16_t address, uint8_t byte) {
                 }
                 break;
             }
+            case 0xFF40: {
+                if (!(byte & (1 << 5))) {
+                    window = false;
+                }
+            }
             case 0xFF4F: {
                 vram_bank = byte & 1;
                 break;
@@ -165,7 +171,7 @@ void write_byte(uint16_t address, uint8_t byte) {
                 break;
             }
             case 0xFF69: {
-                if (run_done) {
+                if (mode != Mode::DRAW) {
                     CRAM[regs[0xFF68 - 0xFF00] & LO_6] = byte;
                 }
                 regs[0xFF68 - 0xFF00] = (regs[0xFF68 - 0xFF00] + (regs[0xFF68 - 0xFF00] >> 7)) & (LO_8 ^ (1 << 6));

@@ -22,6 +22,16 @@ extern uint8_t ly;
 extern uint8_t lyc;
 extern bool oam_done;
 extern bool run_done;
+extern bool window;
+
+enum class Mode {
+    OAM,
+    DRAW,
+    HBLANK,
+    VBLANK
+};
+
+extern Mode mode;
 
 void write_byte(uint16_t address, uint8_t byte);
 
