@@ -182,18 +182,41 @@ void draw_window() {
                 uint8_t tile_id = x * 8 + y;
 
                 std::array<uint8_t, 17> tile_data = get_tile_data(tile_id, true);
+
+                if (cgb_mode) {
+                    uint8_t attribute = tile_data[16];
+                    uint8_t row = ((attribute & (1 << 5)) ? 7 - (x & LO_3) : (x & LO_3));
+                    uint8_t col = ((attribute & (1 << 6)) ? y & LO_3 : 7 - (y & LO_3));
+                    
+                    uint8_t palette = attribute & LO_3;
+                    prio[ly][i] = attribute & (1 << 7);
+
+                    uint8_t color_2bit = (((tile_data[2 * row] >> col) & 1) << 1) | ((tile_data[2 * row + 1] >> col) & 1);
+                    uint8_t color_index = palette * 8 + color_2bit * 2; 
+                    uint32_t color = read_cram(color_index) | (((uint16_t)read_cram(color_index)) << 8);
+                    frame_buffer[ly][i] = ((color & LO_5) << 3) | (((color >> 5) & LO_5) << 11) | (((color >> 10) & LO_5) << 19);
+                }
+                else {
+                    uint8_t row = x & LO_3;
+                    uint8_t col = 7 - (y & LO_3);
+
+                    uint8_t color = (((tile_data[2 * row + 1] >> col) & 1) << 1) | ((tile_data[2 * row] >> col) & 1);
+                    color = color * (lcdc & 1);
+                    frame_buffer[ly][i] = GB_COLOR[color];
+                }
             }
         }
     }
+}
 
-    
+void draw_objs() {
+
 }
 
 void run_draw() {
     if (run_done) {
         return;
     }
-
 
     lcdc = read_byte(0xFF40);
 
@@ -202,6 +225,9 @@ void run_draw() {
     if ((lcdc & (1 << 5)) && (cgb_mode || (lcdc & 1))) {
         draw_window();
     }
+
+        
+    run_done = true;
 }
 
 
