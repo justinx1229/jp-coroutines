@@ -15,6 +15,8 @@ uint8_t WRAM_2[SIZE_WRAM];
 
 uint8_t OAM[SIZE_OAM];
 
+uint8_t CRAM[SIZE_CRAM];
+
 uint8_t regs[SIZE_REGS];
 uint8_t HRAM[SIZE_HRAM];
 uint8_t IE;
@@ -22,8 +24,9 @@ uint8_t ly;
 uint8_t lyc; 
 
 bool vram_bank = false;
-bool oam_done = false;
-bool run_done = false;
+bool oam_done = true;
+bool run_done = true;
+bool window = false;
 
 void reset_memory() {
     memset(ROM_bank_00, 0, sizeof(ROM_bank_00));
@@ -118,7 +121,9 @@ void write_byte(uint16_t address, uint8_t byte) {
         ROM_bank_01_NN[address & LO_14] = byte;
     }
     else if (address < 0xA000) {
-        VRAM[address - 0x8000][vram_bank] = byte;
+        if (run_done) {
+            VRAM[address - 0x8000][vram_bank] = byte;
+        }
     }
     else if (address < 0xC000) {
         ext_RAM[address - 0xA000] = byte;
@@ -136,7 +141,7 @@ void write_byte(uint16_t address, uint8_t byte) {
         WRAM_2[address - 0xF000] = byte;
     }
     else if (address < 0xFEA0) {
-        if (oam_done) {
+        if (mode != Mode::OAM && mode != Mode::DRAW) {
             OAM[address - 0xFE00] = byte;
         }
     }
@@ -158,6 +163,11 @@ void write_byte(uint16_t address, uint8_t byte) {
                 }
                 break;
             }
+            case 0xFF40: {
+                if (!(byte & (1 << 5))) {
+                    window = false;
+                }
+            }
             case 0xFF4F: {
                 vram_bank = byte & 1;
                 break;
@@ -169,6 +179,12 @@ void write_byte(uint16_t address, uint8_t byte) {
             case 0xFF45: {
                 lyc = byte;
                 break;
+            }
+            case 0xFF69: {
+                if (mode != Mode::DRAW) {
+                    CRAM[regs[0xFF68 - 0xFF00] & LO_6] = byte;
+                }
+                regs[0xFF68 - 0xFF00] = (regs[0xFF68 - 0xFF00] + (regs[0xFF68 - 0xFF00] >> 7)) & (LO_8 ^ (1 << 6));
             }
         }
     }
@@ -183,4 +199,8 @@ void write_byte(uint16_t address, uint8_t byte) {
 void write16(uint16_t address, uint16_t val) {
     write_byte(address, val & LO_8);
     write_byte(address + 1, val >> 8);
+}
+
+uint8_t read_cram(uint8_t address) {
+    return CRAM[address];
 }

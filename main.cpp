@@ -98,6 +98,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "SDL failed to initialize: " << SDL_GetError() << "\n";
         return 1;
     }
+    std::cout << "creating window \n";
 
     // window
     window = SDL_CreateWindow(
@@ -116,13 +117,15 @@ int main(int argc, char* argv[]) {
     }
 
     if (!init_display(window)) {
+        std::cout << "couldn't display window\n";
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
     }
+    std::cout << "made window\n";
     
     SDL_Event event;
-
+    std::cout << "hi\n";
     // run window. 
     while (!done) {
         // handle quit
@@ -141,7 +144,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < 10000; i++) {
             run();
         }
-
+    
         render_display(frame_buffer);
     }
 
