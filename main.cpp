@@ -151,6 +151,7 @@ int main(int argc, char* argv[]) {
 
         // 3. Render
         render_display(frame_buffer);
+        reset();
 
         // 4. Frame timing (limit speed)
         while (std::chrono::high_resolution_clock::now() - t_cur < FRAME_LEN * 1ms) {}

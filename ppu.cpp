@@ -2,7 +2,7 @@
 
 uint32_t dots = 0;
 
-Mode mode = Mode::OAM;
+Mode mode = Mode::VBLANK;
 
 std::vector<std::array<uint8_t, 4>> sprites; 
 uint8_t lcdc;
@@ -21,12 +21,23 @@ void f_lyc() {
 void compute_mode() {
     if (ly < 144) {
         if (dots <= 80) {
+            if (mode == Mode::VBLANK) {
+                if (read_byte(0xFF41) & (1 << 5)) {
+                    write_byte(0xFF0F, read_byte(0xFF0F) & (1 << 1));
+                }
+            }
             mode = Mode::OAM;
         }
         else if (dots <= 252) {
             mode = Mode::DRAW;
         }
         else {
+            if (mode == Mode::DRAW) {
+                // hblank interrupt
+                if (read_byte(0xFF41) & (1 << 3)) {
+                    write_byte(0xFF0F, read_byte(0xFF0F) | 2);
+                } 
+            }
             mode = Mode::HBLANK;
         }
     }
@@ -36,6 +47,9 @@ void compute_mode() {
         window = false;
         // vblank interrupt
         write_byte(0xFF0F, read_byte(0xFF0F) | 1);
+        if (read_byte(0xFF41) & (1 << 4)) {
+            write_byte(0xFF0F, read_byte(0xFF0F) | 2);
+        } 
     }
     else if (ly > 153) {
         mode = Mode::OAM;
@@ -47,9 +61,6 @@ void compute_mode() {
 void run_oam() {
     if (oam_done) {
         return;
-    }
-    if (read_byte(0xFF41) & (1 << 5)) {
-        write_byte(0xFF0F, read_byte(0xFF0F) & (1 << 1));
     }
 
     uint8_t height = ((read_byte(0xFF40) & (1 << 2)) ? 16 : 8);
@@ -73,7 +84,7 @@ void run_oam() {
     run_done = false;
 }
 
-std::array<uint8_t, 17> get_tile_data(uint8_t tv, bool is_window) {
+std::array<uint8_t, 17> get_tile_data(uint32_t tv, bool is_window) {
     uint16_t base;
     if (!is_window) {
         if (lcdc & (1 << 3)) {
@@ -118,6 +129,10 @@ std::array<uint8_t, 17> get_tile_data(uint8_t tv, bool is_window) {
     else {
         for (uint32_t i = 0; i < 16; i++) {
             data[i] = read_vram(start_index + i, 0);
+            if (data[i]) {
+                std::cout << data[i] << "\n";
+            }
+
         }
     }
 
@@ -141,7 +156,7 @@ void draw_bg() {
         uint8_t x = ly + scy;
         uint8_t y = i + scx;
         x /= 8; y /= 8;
-        uint8_t tile_id = x * 32 + y;
+        uint32_t tile_id = (uint32_t)x * 32 + y;
 
         if (!(i & LO_3)) {
             tile_data = get_tile_data(tile_id, false);
@@ -167,6 +182,7 @@ void draw_bg() {
             uint8_t color = (((tile_data[2 * row + 1] >> col) & 1) << 1) | ((tile_data[2 * row] >> col) & 1);
             color = color * (lcdc & 1);
             frame_buffer[ly][i] = GB_COLOR[color];
+            //frame_buffer[ly][i] = 0xFF00;
         }   
     }
 }
@@ -185,7 +201,7 @@ void draw_window() {
                 uint8_t y = i - (wx - 7);
 
                 x /= 8; y /= 8;
-                uint8_t tile_id = x * 8 + y;
+                uint32_t tile_id = x * 8 + y;
 
                 if (!(i & LO_3)) {
                     tile_data = get_tile_data(tile_id, true);
@@ -297,16 +313,10 @@ void run_draw() {
 
     memset(prio, 0, sizeof(prio));
 
-    for (uint8_t i = 0; i < HEIGHT; i++) {
-        for (uint8_t j = 0; j < WIDTH; j++) {
-            frame_buffer[i][j] = GB_COLOR[0];
-        }
-    }
-
     lcdc = read_byte(0xFF40);
 
     draw_bg();
-    
+
     if ((lcdc & (1 << 5)) && (cgb_mode || (lcdc & 1))) {
         draw_window();
     }
@@ -342,19 +352,29 @@ void run_ppu(uint32_t m_cycles) {
         }
         case Mode::DRAW: {
             write_byte(0xFF41, (read_byte(0xFF41) & (LO_8 ^ LO_2)) | 3);
-            // run_draw();
+            run_draw();
             break;
         }
         case Mode::HBLANK: {
             write_byte(0xFF41, (read_byte(0xFF41) & (LO_8 ^ LO_2)));
-            // run_hblank();
             break;
         }
         case Mode::VBLANK: {
             write_byte(0xFF41, (read_byte(0xFF41) & (LO_8 ^ LO_2)) | 1);
-            // run_vblank();
             break;
         }
     }
     
+}
+
+
+void reset() {
+     for (uint8_t i = 0; i < HEIGHT; i++) {
+        for (uint8_t j = 0; j < WIDTH; j++) {
+            frame_buffer[i][j] = GB_COLOR[0];
+        }
+    }
+
+    ly = 0;
+    dots = 0;
 }
