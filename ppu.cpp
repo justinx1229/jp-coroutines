@@ -129,10 +129,6 @@ std::array<uint8_t, 17> get_tile_data(uint32_t tv, bool is_window) {
     else {
         for (uint32_t i = 0; i < 16; i++) {
             data[i] = read_vram(start_index + i, 0);
-            if (data[i]) {
-                std::cout << data[i] << "\n";
-            }
-
         }
     }
 
@@ -182,7 +178,8 @@ void draw_bg() {
             uint8_t color = (((tile_data[2 * row + 1] >> col) & 1) << 1) | ((tile_data[2 * row] >> col) & 1);
             color = color * (lcdc & 1);
             frame_buffer[ly][i] = GB_COLOR[color];
-            //frame_buffer[ly][i] = 0xFF00;
+    
+            // frame_buffer[ly][i] = 0xFF00;
         }   
     }
 }

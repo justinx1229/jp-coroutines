@@ -114,7 +114,6 @@ uint8_t read_byte(uint16_t address) {
 }
 
 void write_byte(uint16_t address, uint8_t byte) {
-
     if (address < 0x4000) {
         ROM_bank_00[address] = byte;
     }
@@ -123,9 +122,7 @@ void write_byte(uint16_t address, uint8_t byte) {
     }
     else if (address < 0xA000) {
         if (mode != Mode::DRAW) {
-            if (byte) {
-                VRAM[address - 0x8000][vram_bank] = byte;
-            }
+            VRAM[address - 0x8000][vram_bank] = byte;
         }
     }
     else if (address < 0xC000) {
