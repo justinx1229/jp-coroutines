@@ -126,7 +126,9 @@ int main(int argc, char* argv[]) {
     SDL_Event event;
     // run window. 
     while (!done) {
-        // handle quit
+        auto t_cur = std::chrono::high_resolution_clock::now();
+
+        // 1. Handle events
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 done = true;
@@ -138,17 +140,20 @@ int main(int argc, char* argv[]) {
                 update_button(event.key.keysym.sym, false);
             }
         }
-        auto t_cur = std::chrono::high_resolution_clock::now();
+
+        // 2. Run ONE FRAME worth of cycles
         uint32_t cur_cyc = 0;
-        while (true) {
+        while (cur_cyc < CYC) {
             uint8_t mcycles = run();
             run_ppu(mcycles);
             cur_cyc += mcycles;
-            if (cur_cyc >= CYC) {
-                while (std::chrono::high_resolution_clock::now() - t_cur < FRAME_LEN * 1ms) {}
-            }
         }
+
+        // 3. Render
         render_display(frame_buffer);
+
+        // 4. Frame timing (limit speed)
+        while (std::chrono::high_resolution_clock::now() - t_cur < FRAME_LEN * 1ms) {}
     }
 
     destroy_display();
