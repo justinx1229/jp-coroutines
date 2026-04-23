@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <vector>
 
 const uint32_t SIZE_ROM_BANK = 1 << 14;
 const uint32_t SIZE_VRAM = 1 << 13;
@@ -39,6 +40,7 @@ void write_byte(uint16_t address, uint8_t byte);
 void write16(uint16_t address, uint16_t val);
 
 void reset_memory();
+void load_rom(const std::vector<uint8_t> &bytes);
 
 uint8_t read_vram(uint16_t address, bool bank);
 

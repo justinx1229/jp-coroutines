@@ -75,9 +75,7 @@ int main(int argc, char* argv[]) {
     }
 
     reset_memory();
-    for (uint32_t i = 0; i < bytes.size(); i++) {
-        write_byte(i, bytes[i]);
-    }
+    load_rom(bytes);
     reset_cpu();
 
     if (headless) {
