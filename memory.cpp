@@ -156,9 +156,6 @@ uint8_t read_byte(uint16_t address) {
     }
     
     else if (address < 0xFEA0) {
-        if (mode == Mode::OAM || mode == Mode::DRAW) {
-            return 0xFF;  // OAM blocked
-        }
         return OAM[address - 0xFE00];
     }
     else if (address >= 0xFF00 && address < 0xFF80) {
@@ -249,9 +246,10 @@ void write_byte(uint16_t address, uint8_t byte) {
         WRAM_2[address - 0xF000] = byte;
     }
     else if (address < 0xFEA0) {
-        if (mode != Mode::OAM && mode != Mode::DRAW) {
+        // if (mode != Mode::OAM && mode != Mode::DRAW) {
+        // std::cout << "write OAM" << address << " " << (uint32_t)byte << "\n";
             OAM[address - 0xFE00] = byte;
-        }
+        // }
     }
     else if (address >= 0xFF00 && address < 0xFF80) {
         regs[address - 0xFF00] = byte;
