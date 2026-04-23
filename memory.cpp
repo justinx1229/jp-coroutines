@@ -285,13 +285,6 @@ void write_byte(uint16_t address, uint8_t byte) {
                 lyc = byte;
                 break;
             }
-            case 0xFF46: {
-                uint16_t source = ((uint16_t)byte) << 8;
-                for (uint16_t i = 0; i < SIZE_OAM; i++) {
-                    OAM[i] = read_byte(source + i);
-                }
-                break;
-            }
             case 0xFF69: {
                 if (mode != Mode::DRAW) {
                     CRAM[regs[0xFF68 - 0xFF00] & LO_6] = byte;
