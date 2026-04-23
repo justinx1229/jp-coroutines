@@ -206,7 +206,13 @@ uint8_t estimate_cycles(uint8_t byte, uint8_t cb_byte) {
     }
 
     if (byte == CB) {
-        return (cb_byte & LO_3) == 6 ? 4 : 2;
+        bool is_hl = (cb_byte & LO_3) == 6;
+        uint8_t op = cb_byte >> 6;
+        if (op == 1) {
+            return is_hl ? 3 : 2;
+        } else {
+            return is_hl ? 4 : 2;
+        }
     }
 
     switch (byte >> 6) {
