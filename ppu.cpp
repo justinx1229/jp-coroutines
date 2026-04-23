@@ -174,9 +174,9 @@ void draw_bg() {
             should_print = true;
         }
 
-        if (!(i & LO_3)) {
+        // if (!(i & LO_3)) {
             tile_data = get_tile_data(tile_id, false);
-        }
+        // }
         should_print = false;
 
         if (cgb_mode) {
@@ -226,9 +226,9 @@ void draw_window() {
                 x /= 8; y /= 8;
                 uint32_t tile_id = x * 8 + y;
 
-                if (!(i & LO_3)) {
+                // if (!(i & LO_3)) {
                     tile_data = get_tile_data(tile_id, true);
-                }
+                // }
 
                 if (cgb_mode) {
                     uint8_t attribute = tile_data[16];
