@@ -8,6 +8,6 @@
 
 extern uint32_t frame_buffer[HEIGHT][WIDTH];
 
-void run_ppu(uint32_t m_cycles);
+uint32_t run_ppu(uint32_t m_cycles);
 
 void reset();

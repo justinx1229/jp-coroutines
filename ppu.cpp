@@ -9,6 +9,9 @@ uint8_t lcdc;
 uint32_t frame_buffer[HEIGHT][WIDTH];
 bool prio[HEIGHT][WIDTH];
 
+bool good_print = false;
+bool should_print = false;
+
 void f_lyc() {
     if (ly == lyc) {
         write_byte(0xFF41, read_byte(0xFF41) | (1 << 2));
@@ -107,11 +110,11 @@ std::array<uint8_t, 17> get_tile_data(uint32_t tv, bool is_window) {
 
     uint16_t start_index;
 
-    if (lcdc & (1 << 4)) {
+    if ((lcdc & (1 << 4))) {
         start_index = 0x8000 + (((uint16_t)tile_id) << 4);
     }
     else {
-        start_index = 0x9000 + (((uint16_t)((int8_t)tile_id)) << 4);
+        start_index = 0x9000 + (((int32_t)tile_id) * 16);
     }
 
     std::array<uint8_t, 17> data;
@@ -119,6 +122,9 @@ std::array<uint8_t, 17> get_tile_data(uint32_t tv, bool is_window) {
     // get attribute
     if (cgb_mode) {
         data[16] = read_vram(base + tv, 1);
+    }
+    else {
+        data[16] = 0;
     }
 
     if (cgb_mode && (data[16] & (1 << 3))) {
@@ -128,10 +134,18 @@ std::array<uint8_t, 17> get_tile_data(uint32_t tv, bool is_window) {
     }
     else {
         for (uint32_t i = 0; i < 16; i++) {
+            if (start_index + i == 0x8300) {
+                good_print = true;
+                data[16] = 1;
+                // std::cout << "ko ko " << (uint32_t)read_vram(start_index + i, 0) << "\n";
+            }
             data[i] = read_vram(start_index + i, 0);
+            if (good_print) {
+                // std::cout << (uint32_t)data[i] << " " << i << "\n";
+            }
         }
     }
-
+    good_print = false;
     return data; 
 }
 
@@ -151,17 +165,24 @@ void draw_bg() {
     for (uint8_t i = 0; i < WIDTH; i++) {
         uint8_t x = ly + scy;
         uint8_t y = i + scx;
+        uint8_t tx = x; uint8_t ty = y;
+
         x /= 8; y /= 8;
         uint32_t tile_id = (uint32_t)x * 32 + y;
+
+        if (x == 0 && y == 0) {
+            should_print = true;
+        }
 
         if (!(i & LO_3)) {
             tile_data = get_tile_data(tile_id, false);
         }
+        should_print = false;
 
         if (cgb_mode) {
             uint8_t attribute = tile_data[16];
-            uint8_t row = ((attribute & (1 << 5)) ? 7 - (x & LO_3) : (x & LO_3));
-            uint8_t col = ((attribute & (1 << 6)) ? y & LO_3 : 7 - (y & LO_3));
+            uint8_t row = ((attribute & (1 << 5)) ? 7 - (tx & LO_3) : (tx & LO_3));
+            uint8_t col = ((attribute & (1 << 6)) ? ty & LO_3 : 7 - (ty & LO_3));
             
             uint8_t palette = attribute & LO_3;
             prio[ly][i] = attribute & (1 << 7);
@@ -172,11 +193,15 @@ void draw_bg() {
             frame_buffer[ly][i] = ((color & LO_5) << 3) | (((color >> 5) & LO_5) << 11) | (((color >> 10) & LO_5) << 19);
         }
         else {
-            uint8_t row = x & LO_3;
-            uint8_t col = 7 - (y & LO_3);
+            uint8_t row = tx & LO_3;
+            uint8_t col = 7 - (ty & LO_3);
 
             uint8_t color = (((tile_data[2 * row + 1] >> col) & 1) << 1) | ((tile_data[2 * row] >> col) & 1);
             color = color * (lcdc & 1);
+            if (tile_data[16]) {
+                // std::cout << "color " << (uint32_t)x << " " << (uint32_t)y << " " << (uint32_t)ly << " " << (uint32_t)i << " " << (uint32_t)row << " " << (uint32_t)col << "\n";
+                // std::cout << (uint32_t)color << "\n";
+            }
             frame_buffer[ly][i] = GB_COLOR[color];
     
             // frame_buffer[ly][i] = 0xFF00;
@@ -196,6 +221,7 @@ void draw_window() {
             if (wx - 7 >= i) {
                 uint8_t x = wy - ly;
                 uint8_t y = i - (wx - 7);
+                uint8_t tx = x; uint8_t ty = y;
 
                 x /= 8; y /= 8;
                 uint32_t tile_id = x * 8 + y;
@@ -206,8 +232,8 @@ void draw_window() {
 
                 if (cgb_mode) {
                     uint8_t attribute = tile_data[16];
-                    uint8_t row = ((attribute & (1 << 5)) ? 7 - (x & LO_3) : (x & LO_3));
-                    uint8_t col = ((attribute & (1 << 6)) ? y & LO_3 : 7 - (y & LO_3));
+                    uint8_t row = ((attribute & (1 << 5)) ? 7 - (tx & LO_3) : (tx & LO_3));
+                    uint8_t col = ((attribute & (1 << 6)) ? ty & LO_3 : 7 - (ty & LO_3));
                     
                     uint8_t palette = attribute & LO_3;
                     prio[ly][i] = attribute & (1 << 7);
@@ -218,8 +244,8 @@ void draw_window() {
                     frame_buffer[ly][i] = ((color & LO_5) << 3) | (((color >> 5) & LO_5) << 11) | (((color >> 10) & LO_5) << 19);
                 }
                 else {
-                    uint8_t row = x & LO_3;
-                    uint8_t col = 7 - (y & LO_3);
+                    uint8_t row = tx & LO_3;
+                    uint8_t col = 7 - (ty & LO_3);
 
                     uint8_t color = (((tile_data[2 * row + 1] >> col) & 1) << 1) | ((tile_data[2 * row] >> col) & 1);
                     color = color * (lcdc & 1);
@@ -325,7 +351,7 @@ void run_draw() {
 }
 
 
-void run_ppu(uint32_t m_cycles) {
+uint32_t run_ppu(uint32_t m_cycles) {
     uint32_t t_cycles = 4 * m_cycles;
     // add dots
     dots += t_cycles;
@@ -362,6 +388,7 @@ void run_ppu(uint32_t m_cycles) {
         }
     }
     
+    return t_cycles;
 }
 
 

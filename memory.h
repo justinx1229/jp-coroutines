@@ -32,6 +32,7 @@ enum class Mode {
 };
 
 extern Mode mode;
+extern uint32_t dots;
 
 void write_byte(uint16_t address, uint8_t byte);
 

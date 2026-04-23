@@ -55,7 +55,7 @@ uint8_t read_byte(uint16_t address) {
         return ROM_bank_01_NN[address & LO_14];
     }
     else if (address < 0xA000) {
-        return VRAM[address - 0x8000][vram_bank];
+        return VRAM[address - 0x8000][vram_bank & cgb_mode];
     }
     else if (address < 0xC000) {
         return ext_RAM[address - 0xA000];
@@ -121,8 +121,10 @@ void write_byte(uint16_t address, uint8_t byte) {
         ROM_bank_01_NN[address & LO_14] = byte;
     }
     else if (address < 0xA000) {
+
         if (mode != Mode::DRAW) {
-            VRAM[address - 0x8000][vram_bank] = byte;
+
+            VRAM[address - 0x8000][vram_bank && cgb_mode] = byte;
         }
     }
     else if (address < 0xC000) {

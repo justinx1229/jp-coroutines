@@ -143,11 +143,13 @@ int main(int argc, char* argv[]) {
 
         // 2. Run ONE FRAME worth of cycles
         uint32_t cur_cyc = 0;
+        uint32_t dots = 0;
         while (cur_cyc < CYC) {
             uint8_t mcycles = run();
-            run_ppu(mcycles);
+            dots += run_ppu(mcycles);
             cur_cyc += mcycles;
         }
+
 
         // 3. Render
         render_display(frame_buffer);
