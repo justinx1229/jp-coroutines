@@ -122,7 +122,14 @@ void write_byte(uint16_t address, uint8_t byte) {
     }
     else if (address < 0xA000) {
 
+        if (address >= 0x8300 && address < 0x8310) {
+                std::cout << vram_bank << " " << (uint32_t)byte << " " << dots << " wirte\n";
+            }
+
         if (mode != Mode::DRAW) {
+            if (address >= 0x8300 && address < 0x8310) {
+                std::cout << vram_bank << " " << (uint32_t)byte << " GOOD\n";
+            }
 
             VRAM[address - 0x8000][vram_bank && cgb_mode] = byte;
         }
