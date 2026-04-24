@@ -42,6 +42,7 @@ void sime_to_ime() {
 }
 
 uint8_t handle_interrupt(uint16_t &pc, uint16_t &sp) {
+    // tick_timer(1);
     uint8_t ie_ = read_byte(0xFFFF);
     uint8_t if_ = read_byte(0xFF0F);
 
@@ -61,13 +62,13 @@ uint8_t handle_interrupt(uint16_t &pc, uint16_t &sp) {
         if (ie_ & if_ & (1 << i)) {
             ime = false;
             write_byte(--sp, pc >> 8);
-            tick_timer(1);
+            // tick_timer(1);
             write_byte(--sp, pc & LO_8);
-            tick_timer(1);
+            // tick_timer(1);
             pc = I_JUMPS[i];
+            // tick_timer(1);
             write_byte(0xFF0F, read_byte(0xFF0F) ^ (1 << i));
-            tick_timer(1);
-            tick_timer(1);
+            // tick_timer(1);
             return 5;
         }
     }
