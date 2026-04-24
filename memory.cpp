@@ -3,12 +3,13 @@
 #include "joypad.h"
 #include "timer.h"
 #include <cstring>
+#include <vector>
 
 uint8_t ROM_bank_00[SIZE_ROM_BANK];
 uint8_t ROM_bank_01_NN[SIZE_ROM_BANK];
 
 uint8_t VRAM[SIZE_VRAM][2];
-uint8_t ext_RAM[SIZE_VRAM];
+uint8_t ext_RAM[SIZE_EXT_RAM];
 
 uint8_t WRAM_1[SIZE_WRAM];
 uint8_t WRAM_2[SIZE_WRAM];
@@ -28,9 +29,43 @@ bool oam_done = true;
 bool run_done = true;
 bool window = false;
 
+std::vector<uint8_t> cartridge_rom;
+uint8_t cartridge_type = 0;
+uint32_t rom_bank_count = 0;
+bool ram_enabled = false;
+uint8_t mbc3_rom_bank = 1;
+uint8_t mbc3_ram_bank = 0;
+
+uint32_t effective_rom_bank(uint16_t address) {
+    if (!rom_bank_count) {
+        return 0;
+    }
+
+    if (cartridge_type == 0x11 || cartridge_type == 0x12 || cartridge_type == 0x13) {
+        if (address < 0x4000) {
+            return 0;
+        }
+
+        uint32_t bank = mbc3_rom_bank & 0x7F;
+        bank %= rom_bank_count;
+        if (!bank) {
+            bank = 1 % rom_bank_count;
+        }
+        return bank;
+    }
+
+    if (address < 0x4000) {
+        return 0;
+    }
+
+    if (rom_bank_count <= 1) {
+        return 0;
+    }
+
+    return 1;
+}
+
 void reset_memory() {
-    memset(ROM_bank_00, 0, sizeof(ROM_bank_00));
-    memset(ROM_bank_01_NN, 0, sizeof(ROM_bank_01_NN));
     memset(VRAM, 0, sizeof(VRAM));
     memset(ext_RAM, 0, sizeof(ext_RAM));
     memset(WRAM_1, 0, sizeof(WRAM_1));
@@ -39,8 +74,34 @@ void reset_memory() {
     memset(regs, 0, sizeof(regs));
     memset(HRAM, 0, sizeof(HRAM));
     IE = 0;
+    cartridge_rom.clear();
+    cartridge_type = 0;
+    rom_bank_count = 0;
+    ram_enabled = false;
+    mbc3_rom_bank = 1;
+    mbc3_ram_bank = 0;
     reset_joypad();
     reset_timer();
+}
+
+void load_rom(const std::vector<uint8_t> &bytes) {
+    cartridge_rom = bytes;
+    rom_bank_count = (bytes.size() + SIZE_ROM_BANK - 1) / SIZE_ROM_BANK;
+    cartridge_type = bytes.size() > 0x147 ? bytes[0x147] : 0;
+    ram_enabled = false;
+    mbc3_rom_bank = 1;
+    mbc3_ram_bank = 0;
+
+    memset(ROM_bank_00, 0, sizeof(ROM_bank_00));
+    memset(ROM_bank_01_NN, 0, sizeof(ROM_bank_01_NN));
+
+    uint32_t first_bank_size = std::min<uint32_t>(SIZE_ROM_BANK, bytes.size());
+    memcpy(ROM_bank_00, bytes.data(), first_bank_size);
+
+    if (bytes.size() > SIZE_ROM_BANK) {
+        uint32_t second_bank_size = std::min<uint32_t>(SIZE_ROM_BANK, bytes.size() - SIZE_ROM_BANK);
+        memcpy(ROM_bank_01_NN, bytes.data() + SIZE_ROM_BANK, second_bank_size);
+    }
 }
 
 uint8_t read_vram(uint16_t address, bool bank) {
@@ -49,17 +110,34 @@ uint8_t read_vram(uint16_t address, bool bank) {
 
 uint8_t read_byte(uint16_t address) {
     if (address < 0x4000) {
-        return ROM_bank_00[address];
+        if (cartridge_rom.empty()) {
+            return ROM_bank_00[address];
+        }
+
+        uint32_t bank = effective_rom_bank(address);
+        uint32_t index = bank * SIZE_ROM_BANK + address;
+        return index < cartridge_rom.size() ? cartridge_rom[index] : 0xFF;
     }
     else if (address < 0x8000) {
-        return ROM_bank_01_NN[address & LO_14];
+        if (cartridge_rom.empty()) {
+            return ROM_bank_01_NN[address & LO_14];
+        }
+
+        uint32_t bank = effective_rom_bank(address);
+        uint32_t index = bank * SIZE_ROM_BANK + (address & LO_14);
+        return index < cartridge_rom.size() ? cartridge_rom[index] : 0xFF;
     }
     else if (address < 0xA000) {
     
         return VRAM[address - 0x8000][vram_bank & cgb_mode];
     }
     else if (address < 0xC000) {
-        return ext_RAM[address - 0xA000];
+        if (!ram_enabled) {
+            return 0xFF;
+        }
+
+        uint32_t ram_index = mbc3_ram_bank * SIZE_EXT_RAM_BANK + (address - 0xA000);
+        return ram_index < SIZE_EXT_RAM ? ext_RAM[ram_index] : 0xFF;
     }
     else if (address < 0xD000) {
         return WRAM_1[address - 0xC000];
@@ -116,10 +194,30 @@ uint8_t read_byte(uint16_t address) {
 
 void write_byte(uint16_t address, uint8_t byte) {
     if (address < 0x4000) {
-        ROM_bank_00[address] = byte;
+        if (cartridge_type == 0x11 || cartridge_type == 0x12 || cartridge_type == 0x13) {
+            if (address < 0x2000) {
+                ram_enabled = (byte & 0x0F) == 0x0A;
+            }
+            else {
+                mbc3_rom_bank = byte & 0x7F;
+                if (!mbc3_rom_bank) {
+                    mbc3_rom_bank = 1;
+                }
+            }
+        }
+        else {
+            ROM_bank_00[address] = byte;
+        }
     }
     else if (address < 0x8000) {
-        ROM_bank_01_NN[address - 0x4000] = byte;
+        if (cartridge_type == 0x11 || cartridge_type == 0x12 || cartridge_type == 0x13) {
+            if (address < 0x6000) {
+                mbc3_ram_bank = byte & LO_2;
+            }
+        }
+        else {
+            ROM_bank_01_NN[address & LO_14] = byte;
+        }
     }
     else if (address < 0xA000) {
         // if (mode != Mode::DRAW) {
@@ -127,7 +225,12 @@ void write_byte(uint16_t address, uint8_t byte) {
         // }
     }
     else if (address < 0xC000) {
-        ext_RAM[address - 0xA000] = byte;
+        if (ram_enabled) {
+            uint32_t ram_index = mbc3_ram_bank * SIZE_EXT_RAM_BANK + (address - 0xA000);
+            if (ram_index < SIZE_EXT_RAM) {
+                ext_RAM[ram_index] = byte;
+            }
+        }
     }
     else if (address < 0xD000) {
         WRAM_1[address - 0xC000] = byte;
