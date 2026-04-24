@@ -1,6 +1,7 @@
 
 #include "interrupts.h"
 #include "memory.h"
+#include "timer.h"
 
 bool halt = false;
 bool set_ime = false;
@@ -60,9 +61,13 @@ uint8_t handle_interrupt(uint16_t &pc, uint16_t &sp) {
         if (ie_ & if_ & (1 << i)) {
             ime = false;
             write_byte(--sp, pc >> 8);
+            tick_timer(1);
             write_byte(--sp, pc & LO_8);
+            tick_timer(1);
             pc = I_JUMPS[i];
-            write_byte(0xFF0F, read_byte(0xFF0F) & (~(1 << i)));
+            write_byte(0xFF0F, read_byte(0xFF0F) ^ (1 << i));
+            tick_timer(1);
+            tick_timer(1);
             return 5;
         }
     }

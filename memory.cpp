@@ -182,6 +182,14 @@ void write_byte(uint16_t address, uint8_t byte) {
                 lyc = byte;
                 break;
             }
+            case 0xFF46: {
+                uint16_t start_address = ((uint16_t)byte) * 256;
+                for (uint32_t i = 0; i < SIZE_OAM; i++) {
+                    write_byte(0xFE00 + i, read_byte(start_address + i));
+                    // std::cout << (uint32_t)read_byte(start_address + i) << " ";
+                }
+                // std::cout << "\n";
+            }
             case 0xFF69: {
                 if (mode != Mode::DRAW) {
                     CRAM[regs[0xFF68 - 0xFF00] & LO_6] = byte;

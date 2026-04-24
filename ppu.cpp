@@ -7,6 +7,7 @@ Mode mode = Mode::VBLANK;
 std::vector<std::array<uint8_t, 4>> sprites; 
 uint8_t lcdc;
 uint32_t frame_buffer[HEIGHT][WIDTH];
+uint8_t color_code[HEIGHT][WIDTH];
 bool prio[HEIGHT][WIDTH];
 
 bool good_print = false;
@@ -71,11 +72,11 @@ void run_oam() {
     for (uint32_t i = 0xFE00; i < 0xFE9F; i += 4) {
         uint8_t y_pos = read_byte(i);
         uint8_t x_pos = read_byte(i + 1);
-        // std::cout << i << " " << (uint32_t)x_pos << " " << (uint32_t)y_pos << "\n";
         uint8_t tile_index = read_byte(i + 2);
         uint8_t attributes = read_byte(i + 3);
 
         if (ly + 16 >= y_pos && ly + 16 < y_pos + height) {
+
             sprites.push_back({y_pos, x_pos, tile_index, attributes});
         }
 
@@ -191,9 +192,11 @@ void draw_bg() {
             prio[ly][i] = attribute & (1 << 7);
 
             uint8_t color_2bit = (((tile_data[2 * row] >> col) & 1) << 1) | ((tile_data[2 * row + 1] >> col) & 1);
+
             uint8_t color_index = palette * 8 + color_2bit * 2; 
             uint32_t color = read_cram(color_index) | (((uint16_t)read_cram(color_index + 1)) << 8);
             frame_buffer[ly][i] = ((color & LO_5) << 3) | (((color >> 5) & LO_5) << 11) | (((color >> 10) & LO_5) << 19);
+            color_code[ly][i] = color_2bit;
         }
         else {
             uint8_t row = tx & LO_3;
@@ -201,11 +204,9 @@ void draw_bg() {
 
             uint8_t color = (((tile_data[2 * row + 1] >> col) & 1) << 1) | ((tile_data[2 * row] >> col) & 1);
             color = color * (lcdc & 1);
-            if (tile_data[16]) {
-                // std::cout << "color " << (uint32_t)x << " " << (uint32_t)y << " " << (uint32_t)ly << " " << (uint32_t)i << " " << (uint32_t)row << " " << (uint32_t)col << "\n";
-                // std::cout << (uint32_t)color << "\n";
-            }
-            frame_buffer[ly][i] = GB_COLOR[color];
+            frame_buffer[ly][i] = GB_COLOR[(read_byte(0xFF47) >> (color * 2)) & LO_2];
+            // frame_buffer[ly][i] = GB_COLOR[color];
+            color_code[ly][i] = color;
     
             // frame_buffer[ly][i] = 0xFF00;
         }   
@@ -245,6 +246,7 @@ void draw_window() {
                     uint8_t color_index = palette * 8 + color_2bit * 2; 
                     uint32_t color = read_cram(color_index) | (((uint16_t)read_cram(color_index)) << 8);
                     frame_buffer[ly][i] = ((color & LO_5) << 3) | (((color >> 5) & LO_5) << 11) | (((color >> 10) & LO_5) << 19);
+                    color_code[ly][i] = color_2bit;
                 }
                 else {
                     uint8_t row = tx & LO_3;
@@ -252,7 +254,8 @@ void draw_window() {
 
                     uint8_t color = (((tile_data[2 * row + 1] >> col) & 1) << 1) | ((tile_data[2 * row] >> col) & 1);
                     color = color * (lcdc & 1);
-                    frame_buffer[ly][i] = GB_COLOR[color];
+                    frame_buffer[ly][i] = GB_COLOR[(read_byte(0xFF47) >> (color * 2)) & LO_2];
+                    color_code[ly][i] = color;
                 }
             }
         }
@@ -273,7 +276,6 @@ void draw_objs() {
         if (lcdc & (1 << 2)) {
             height <<= 1;
         }
-        std::cout << "WTF\n";
 
         if (!cgb_mode) {
             uint8_t relative_x = ly - i[0];
@@ -293,12 +295,13 @@ void draw_objs() {
 
                 uint8_t color = ((read_byte(address) >> col) & 1) | (((read_byte(address + 1) >> col) & 1) << 1);
                 
-                if (color) {
+                if (color && (!(attributes & (1 << 7)) || !color_code[ly][7 - j + i[1]])) {
                     if (attributes & (1 << 4)) {
-                        frame_buffer[ly][7 - j + i[1]] = GB_COLOR[(read_byte(0xFF49) >> color) & LO_2];
+                        // std::cout << (uint32_t)ly << " " << 7 - j + i[1] << "\n";
+                        frame_buffer[ly][7 - j + i[1]] = GB_COLOR[(read_byte(0xFF49) >> (color * 2)) & LO_2];
                     }
                     else {
-                        frame_buffer[ly][7 - j + i[1]] = GB_COLOR[(read_byte(0xFF48) >> color) & LO_12];
+                        frame_buffer[ly][7 - j + i[1]] = GB_COLOR[(read_byte(0xFF48) >> (color * 2)) & LO_2];
                     }
                 }
             }
@@ -325,7 +328,7 @@ void draw_objs() {
                     uint8_t palette = attributes & LO_3;
                     uint8_t color_index =  palette * 8 + color_2bit * 2;
                     uint32_t color = read_cram(color_index) | (((uint16_t)read_cram(color_index + 1)) << 8);
-                    if (!(lcdc & 1) || (!(attributes & (1 << 7)) && !prio[ly][7 - j + i[1]]) || frame_buffer[ly][7 - j + i[1]] == GB_COLOR[0]) {
+                    if (!(lcdc & 1) || (!(attributes & (1 << 7)) && !prio[ly][7 - j + i[1]]) || !color_code[ly][7 - j + i[1]]) {
                         frame_buffer[ly][7 - j + i[1]] = ((color & LO_5) << 3) | (((color >> 5) & LO_5) << 11) | (((color >> 10) & LO_5) << 19);
                     }
                 }
@@ -352,6 +355,7 @@ void run_draw() {
     if (lcdc & 2) {
         draw_objs();
     }
+    sprites.clear();
     run_done = true;
 }
 
@@ -398,7 +402,8 @@ uint32_t run_ppu(uint32_t m_cycles) {
 
 
 void reset() {
-     for (uint8_t i = 0; i < HEIGHT; i++) {
+    memset(color_code, 0, sizeof(color_code));
+    for (uint8_t i = 0; i < HEIGHT; i++) {
         for (uint8_t j = 0; j < WIDTH; j++) {
             frame_buffer[i][j] = GB_COLOR[0];
         }

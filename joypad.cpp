@@ -21,30 +21,38 @@ uint8_t read_joypad() {
 
     if (!(joypad_select & (1 << 4))) {
         if (buttons[button_index(Button::RIGHT)]) {
+            // std::cout << "RIGHT\n";
             value &= ~1;
         }
         if (buttons[button_index(Button::LEFT)]) {
+            // std::cout << "LEFT\n";
             value &= ~(1 << 1);
         }
         if (buttons[button_index(Button::UP)]) {
+            // std::cout << "UP\n";
             value &= ~(1 << 2);
         }
         if (buttons[button_index(Button::DOWN)]) {
+            // std::cout << "DOWN\n";
             value &= ~(1 << 3);
         }
     }
 
     if (!(joypad_select & (1 << 5))) {
         if (buttons[button_index(Button::A)]) {
+            // std::cout << "A\n";
             value &= ~1;
         }
         if (buttons[button_index(Button::B)]) {
+            // std::cout << "B\n";
             value &= ~(1 << 1);
         }
         if (buttons[button_index(Button::SELECT)]) {
+            // std::cout << "SEL\n";
             value &= ~(1 << 2);
         }
         if (buttons[button_index(Button::START)]) {
+            // std::cout << "START\n";
             value &= ~(1 << 3);
         }
     }

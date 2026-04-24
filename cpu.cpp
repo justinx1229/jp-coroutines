@@ -37,7 +37,9 @@ void reset_cpu() {
 }
 
 uint8_t next8() {
-    return read_byte(pc++);
+    uint8_t v = read_byte(pc++);
+    tick_timer(1);
+    return v;
 }
 
 uint16_t next16() {
@@ -1091,7 +1093,6 @@ uint8_t run() {
 
     uint8_t interrupt_cycles = handle_interrupt(pc, sp);
     if (interrupt_cycles) {
-        tick_timer(interrupt_cycles);
         sime_to_ime();
         return interrupt_cycles;
     }
@@ -1155,7 +1156,7 @@ uint8_t run() {
         return 1;
     }
 
-    tick_timer(m_cycles);
+    // tick_timer(m_cycles);
     sime_to_ime();
     return m_cycles;
 }
